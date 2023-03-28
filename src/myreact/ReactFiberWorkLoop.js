@@ -1,14 +1,17 @@
 import { updateClassComponent, updateFragmentComponent, updateFunctionComponent, updateHostComponent } from "./ReactFiberReconciler";
-import { isFn, isStr, NoFlags, Placement } from "./utils";
+import { isFn, isStr, NoFlags, Placement, Update, updateNode } from "./utils";
 
 let wipRoot = null; // 正在工作的根fiber
 let nextUnitOfWork = null; // 下一个要执行的任务
 
 export function scheduleUpdateOnFiber(fiber) {
+  fiber.alternate = {...fiber};
   wipRoot = fiber;
   wipRoot.sibling = null;
 
   nextUnitOfWork = wipRoot;
+
+  requestIdleCallback(workLoop);
 }
 
 function performUnitOfWork(wip) {
@@ -49,7 +52,7 @@ function workLoop(deadline) {
     commitRoot();
   }
 
-//   requestIdleCallback(workLoop);
+  requestIdleCallback(workLoop);
 }
 
 requestIdleCallback(workLoop);
@@ -71,6 +74,10 @@ function commitWorker(wip) {
     if (flags & Placement && stateNode) {
         parentNode.appendChild(stateNode);
     } 
+
+    if (flags & Update && stateNode) {
+      updateNode(stateNode, wip.alternate.props, wip.props);
+    }
 
     wip.flags = NoFlags;
     commitWorker(wip.child);
